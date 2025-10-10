@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  <div id="app"></div>
+  <script type="module">
+    // import {
+    //   reactive, 
+    //   effect
+    // } from '/node_modules/@vue/reactivity/dist/reactivity.esm-browser.js'
+  
+    import {reactive, effect} from './reactivity.js'
+    
+    const obj1 = {name: 'l', age: 90}
+    const obj2 = {name: 'k', age: 90}
+    const state = reactive(obj1)
+    const state2 = reactive(obj1)
+
+    console.log(state.name)
+
+    const _effect = effect(() => {
+      app.innerHTML = `name: ${state.name} age: ${state.age}`
+    })
+    state.age++
+    _effect.run()
+    
+    // setInterval(() => {
+    //   state.age++
+    // }, 1000)
+  
+  </script>
+
+
+</body>
+</html>

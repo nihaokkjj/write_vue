@@ -1,0 +1,22 @@
+{
+  "name": "write_vue",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node script/dev.js reactivity -f esm",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.17.0",
+  "devDependencies": {
+    "esbuild": "^0.25.10",
+    "minimist": "^1.2.8"
+  },
+  "dependencies": {
+    "vue": "^3.5.22"
+  }
+}

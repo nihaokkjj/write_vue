@@ -15,22 +15,33 @@
   
     import {reactive, effect} from './reactivity.js'
     
-    const obj1 = {name: 'l', age: 90}
+    const obj1 = {name: 'l', age: 90, flag: true}
     const obj2 = {name: 'k', age: 90}
     const state = reactive(obj1)
     const state2 = reactive(obj1)
 
-    console.log(state.name)
+    //activeEffect = f1
+    state.name = 'si'
+    state.name = 'i'
+    state.name = 's'
 
-    const _effect = effect(() => {
-      app.innerHTML = `name: ${state.name} age: ${state.age}`
+    let cnt = 0
+    effect(() => {
+     app.innerHTML = state.flage ? state.name : state.age
+      console.log(++cnt)
     })
-    state.age++
-    _effect.run()
-    
-    // setInterval(() => {
-    //   state.age++
-    // }, 1000)
+
+    // effect(() => {
+    //   console.log(state.age)
+    // })
+    setTimeout(() => {
+      state.flag = false
+      setTimeout(() => {
+        console.log('no')
+        state.name = 'p'
+      }, 1000)
+    }, 1000)
+ 
   
   </script>
 

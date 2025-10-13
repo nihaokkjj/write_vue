@@ -1,5 +1,8 @@
-import { activeEffect, trackEffect } from "./effect";
-import { trackEffects } from "./effect";
+import { 
+    activeEffect, 
+    trackEffect,
+    triggerEffects 
+  } from "./effect";
 
 const targetMap = new WeakMap()//存放依赖收集的关系
 
@@ -50,6 +53,7 @@ export function trigger
   let dep = despMap.get(key)
   if (dep) {
     //修改的属性对应了effect
-    trackEffects(dep)
+    triggerEffects(dep)
   }
 }
+

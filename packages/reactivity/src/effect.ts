@@ -1,3 +1,6 @@
+import { DirtyLevels } from "./constants"
+
+
 export function effect(fn, options? ) {
   //创建一个响应式effect, 数据变化后可以重新执行
 
@@ -7,7 +10,12 @@ export function effect(fn, options? ) {
   })
   _effect.run()
 
-  return _effect
+  if(options) {
+    Object.assign(_effect, options) //用户传递的覆盖内置的
+  }
+  const runner = _effect.run.bind(_effect)
+  runner._effect = _effect //使外部可以调用
+  return runner //外界可以自己调用run
 }
 
 export let activeEffect
@@ -18,17 +26,41 @@ function proCleanEffect(effect) {
   //如果在同一个effect中, 同一种数据多次调用, id就是相同的
 }
 
-class ReactiveEffect{
-  _trackId = 0 //用于记录当前effect执行了几次
+function postCleanEffect(effect) {
+  //清理多余的长度
+  if (effect.deps.length > effect._depsLength) {
+    for (let i = effect._depsLength; i < effect.deps.length; ++i) {
+     cleanDepEffect(effect.deps[i], effect)
+    }
+    effect.deps.length = effect._depsLength
+  }
+}
+
+ export class ReactiveEffect{
+  _trackedId = 0 //用于记录当前effect执行了几次
   deps = [] // 数组，用来存储这个 effect 所依赖的所有 dep (Map)
   _depsLenhth = 0
+  _running = 0 //判断监听时值是否发生改变
+  _dirtyLevel = DirtyLevels.Dirty //脏值
 
   public active = true //创建的effect是响应式的
   //fn : 用户编写的函数
   //如果fn中依赖的数据发生变化后, 需要重新调用 run()
   constructor(public fn, public scheduler) { }
 
+  public get dirty() {
+    return this._dirtyLevel === DirtyLevels.Dirty
+  }
+  //访问时, 为脏就返回true
+  //设置时, 为true就是脏的
+  public set dirty(value) {
+    this._dirtyLevel = value ? DirtyLevels.Dirty : DirtyLevels.NoDirty
+  }
+
   run() {// 让fn执行
+    // 每次运行后, 此值就不脏了, 在这次effect中不在执行
+    this._dirtyLevel = DirtyLevels.NoDirty
+
     if (!this.active) { //不是激活的
       return this.fn()
     }
@@ -37,10 +69,14 @@ class ReactiveEffect{
       activeEffect = this
 
       //effect重新执行前, 需要将上一次的依赖情况删除
-      proCleanEffect(this)
+      proCleanEffect(this) //初始化id和length
 
+      this._running++ //值不为0, 需要屏蔽正在运行的effect
+      //防止数据在effect中变化造成死循环
       return this.fn()
     } finally {
+      this._running--//结束运行
+      postCleanEffect(this)
       activeEffect = lastEffect
     }
   }
@@ -64,7 +100,7 @@ export function trackEffect(effect, dep) {
   //如果这个数之前没有被监测, 或在之前的effect检测过
   //更新id值
   //如果是同一个effect里面重复出现的值, id值相同
-  if (dep.get(effect) !== effect._trackId) {
+  if (dep.get(effect) !== effect._trackedId) {
     dep.set(effect, effect._trackedId)
   } 
   //efect与dep关联
@@ -81,10 +117,21 @@ export function trackEffect(effect, dep) {
   }
 }
 
-export function trackEffects(dep) {
+export function triggerEffects(dep) {
+
   for (const effect of dep.keys()) {
-    if (effect.scheduler) {
-      effect.scheduler()
+
+    //当前这个值是不脏的, 但是触发更新需要将值变为脏值
+    //属性依赖了计算属性, 需要让计算属性的dirty初始化
+    if (effect._dirtyLevel < DirtyLevels.Dirty) {
+      effect._dirtyLevel = DirtyLevels.Dirty
+    }
+
+    if (!effect._running) {
+      if(effect.scheduler) {
+        effect.scheduler()//不是正在执行, 才能执行
+        //否则易造成死循环
+      }
     }
   }
 }

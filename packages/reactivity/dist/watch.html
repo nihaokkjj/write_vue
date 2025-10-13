@@ -1,0 +1,55 @@
+
+
+
+
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  <div id="app"></div>
+  <script type="module">
+    import {
+      reactive, 
+      effect,
+      ref,
+      toRef,
+      toRefs,
+      proxyRefs,
+      computed,
+      watch,
+      watchEffect
+    } from '/node_modules/vue/dist/vue.esm-browser.js'
+  
+    const state = reactive({
+      name: 'kk',
+      age: 89,
+      obj: {
+        p: '00',
+        q: 'yu'
+      }
+    })
+    watch(
+      () => state.age,
+      () => {
+        console.log('change')
+      },
+    )
+    console.log('ok')
+    state.age = 10
+    state.obj.p = '000'
+    setTimeout(() => {
+    state.age++
+    console.log('wght')
+  }, 2000);
+  </script>
+
+
+</body>
+</html>

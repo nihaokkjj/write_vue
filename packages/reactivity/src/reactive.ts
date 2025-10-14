@@ -41,3 +41,7 @@ export function toReactive(value) {
   return isObject(value) ? reactive(value) : value
 }
 
+export function isReactive(value) {
+  //!!转换成boolean类型
+  return !!(value && value[ReactiveFlags.IS_REACTIVE])
+}

@@ -198,6 +198,9 @@ function createReactiveObject(target) {
 function toReactive(value) {
   return isObject(value) ? reactive(value) : value;
 }
+function isReactive(value) {
+  return !!(value && value["__v_isReactive" /* IS_REACTIVE */]);
+}
 
 // packages/reactivity/src/ref.ts
 function ref(value) {
@@ -280,6 +283,9 @@ function proxyRefs(objectWithRef) {
     }
   });
 }
+function isRef(value) {
+  return !!(value && value.__v_isRef);
+}
 
 // packages/reactivity/src/computed.ts
 function computed(getterOroptions) {
@@ -318,11 +324,66 @@ var ComputedRefImpl = class {
     this.setter(v);
   }
 };
+
+// packages/reactivity/src/apiWatch.ts
+function watch(source, cb, options = {}) {
+  return doWatch(source, cb, options);
+}
+function watchEffect(source, options = {}) {
+  return doWatch(source, null, options);
+}
+function traverse(source, depth, currentDepth = 0, seen = /* @__PURE__ */ new Set()) {
+  if (!isObject(source)) {
+    return;
+  }
+  if (depth) {
+    if (depth <= currentDepth) {
+      return source;
+    }
+    currentDepth++;
+  }
+  if (seen.has(source)) {
+    return source;
+  }
+  for (let key in source) {
+    traverse(source[key], depth, currentDepth, seen);
+  }
+  return source;
+}
+function doWatch(source, cb, { deep, immediate }) {
+  const reactiveGetter = (source2) => traverse(source2, deep === false ? 1 : void 0);
+  let getter;
+  if (isReactive(source)) {
+    getter = () => reactiveGetter(source);
+  } else if (isRef(source)) {
+    getter = () => source.value;
+  } else if (isFunction(source)) {
+    getter = source;
+  }
+  let oldValue;
+  const job = () => {
+    const newValue = effect2.run();
+    cb(newValue, oldValue);
+    oldValue = newValue;
+  };
+  const effect2 = new ReactiveEffect(getter, job);
+  if (cb) {
+    if (immediate) {
+      job();
+    } else {
+      oldValue = effect2.run();
+    }
+  } else {
+    effect2.run();
+  }
+}
 export {
   ReactiveEffect,
   activeEffect,
   computed,
   effect,
+  isReactive,
+  isRef,
   proxyRefs,
   reactive,
   ref,
@@ -333,6 +394,9 @@ export {
   trackEffect,
   trackRefValue,
   triggerEffects,
-  triggerRefValue
+  triggerRefValue,
+  watch,
+  watchEffect
 };
+//!!转换成boolean类型
 //# sourceMappingURL=reactivity.js.map

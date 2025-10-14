@@ -8,6 +8,17 @@
 <body>
   <div id="app"></div>
   <script type="module">
+    // import {
+    //   reactive, 
+    //   effect,
+    //   ref,
+    //   toRef,
+    //   toRefs,
+    //   proxyRefs,
+    //   computed,
+    //   watch
+    // } from '/node_modules/@vue/reactivity/dist/reactivity.esm-browser.js'
+  
     import {
       reactive, 
       effect,
@@ -16,52 +27,35 @@
       toRefs,
       proxyRefs,
       computed,
-      watch
-    } from '/node_modules/@vue/reactivity/dist/reactivity.esm-browser.js'
+      watch,
+      watchEffect
+    } from './reactivity.js'
   
-    // import {
-    //   reactive, 
-    //   effect,
-    //   ref,
-    //   toRef,
-    //   toRefs,
-    //   proxyRefs,
-    //   computed
-    // } from './reactivity.js'
-  
-    const state = reactive({name: 'p'})
-    
-    const aliasName = computed( {
-      get(oldValue) {
-        console.log('running')
-        console.log(state)
-        return 'ok' + state.name
-      },
-      set(v) {
-        console.log(v, '???')
-      }
+    const state = reactive({name: "kk", age: 90})
+    const name = ref({
+      k: 'kk',
+      op: 'ppp',
     })
-    effect(() => {
-      // debugger
-      console.log(aliasName.value, '+')
-      console.log(aliasName.value, '+')
-      console.log(aliasName.value, '+')
-    })
-    setTimeout(()=> {
-      // debugger
-      state.name = '000'
-      aliasName.value = '----'
-    }, 3000)
-  
 
-    // state.name = 'l'
-    // console.log(aliasName)
-    // effect(
-    //   () => aliasName.value,
+    // watch(
+    //   () => name.value.k,
+    //   function(newValue, oldValue) {
+    //     console.log(name.value.k)
+    //   },
+    //   {
+    //     deep: true, immediate: true
+    //   }
     // )
-    state.name = '0'
+    watchEffect(() => {
+      console.log(state)
+    })
+    setTimeout(() => {
+      state.age++
+      state.name = 'lll'
+      name.value.k = 'okok'
+    }, 1000)
 
-  
+    
   </script>
 
 

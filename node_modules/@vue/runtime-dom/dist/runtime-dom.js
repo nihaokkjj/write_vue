@@ -400,11 +400,37 @@ function doWatch(source, cb, { deep, immediate }) {
   };
   return unwatch;
 }
+
+// packages/runtime-dom/src/nodeOps.ts
+var nodeOps = {
+  insert: (el, parent, anchor) => parent.insertBefore(el, anchor || null),
+  remove(el) {
+    const parent = el.parentNode;
+    if (parent) parent.removeChild(el);
+  },
+  createElement: (type) => document.createElement(type),
+  createText: (text) => document.createTextNode(text),
+  setText: (node, text) => node.nodeValue = text,
+  setElementText: (el, text) => {
+    el.textContent = text;
+  },
+  parentNode: (node) => node.parentNode,
+  nextSibling: (node) => node.nextSibling
+};
+
+// packages/runtime-dom/src/patchProp.ts
+function patchProp() {
+}
+
+// packages/runtime-dom/src/index.ts
+var renderOptions = Object.assign({ patchProp }, nodeOps);
 export {
   ReactiveEffect,
   activeEffect,
   computed,
   effect,
+  isFunction,
+  isObject,
   isReactive,
   isRef,
   proxyRefs,
@@ -422,4 +448,4 @@ export {
   watchEffect
 };
 //!!转换成boolean类型
-//# sourceMappingURL=reactivity.js.map
+//# sourceMappingURL=runtime-dom.js.map

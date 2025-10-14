@@ -25,6 +25,8 @@ const format = args.f || "iife" //打包后的模块化规范
 const entry = resolve(__dirname, `../packages/${target}/src/index.ts`)
 const pkg = require(`../packages/${target}/package.json`)
 
+
+
 esbuild.context({
   entryPoints: [entry], //入口
   //出口

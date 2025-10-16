@@ -15,8 +15,5 @@
   "devDependencies": {
     "esbuild": "^0.25.10",
     "minimist": "^1.2.8"
-  },
-  "dependencies": {
-    "vue": "^3.5.22"
   }
 }

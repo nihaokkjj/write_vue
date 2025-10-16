@@ -8,14 +8,9 @@
 <body>
   <div id="app"></div>
   <script type="module">
-    import {} from ''
-    // import {
-    //   effect
-    // } from 
-    // "./runtime-dom.js"
-
-
-    let el = h("h1", "handsome  dsdsd" )
+    import { render } from './runtime-dom.js'
+    
+    let el = h("h1", "handsome dsdsd" )
     
     const renderer = createRenderer({
       createElement(type) {

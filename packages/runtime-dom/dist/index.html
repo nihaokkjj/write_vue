@@ -8,23 +8,17 @@
 <body>
   <div id="app"></div>
   <script type="module">
-    import { render } from './runtime-dom.js'
+    // import { render } from './runtime-dom.js'
+    import { render, h } from './runtime-dom.js'
     
-    let el = h("h1", "handsome dsdsd" )
-    
-    const renderer = createRenderer({
-      createElement(type) {
-        return document.createElement("h1")
-      },
-      setElementText(el, text) {
-        el.textContent = text
-      },
-      insert(el, container) {
-        container.appendChild(el)
-      }
-    })
+    // let el = h("h1", [h("h2", "hello"), h("i", "llo")]) 
+    //h将他们转换成二进制, 以便之后进行按位异或计算判断是否存在某子元素
 
-    renderer.render(el, app)
+    render (h('h1', 'hello'), app)
+
+    setTimeout(() => {
+      render(h('h1', 'okokok'), app)
+    }, 1000);
   </script>
 </body>
 </html>

@@ -14,10 +14,46 @@
     // let el = h("h1", [h("h2", "hello"), h("i", "llo")]) 
     //h将他们转换成二进制, 以便之后进行按位异或计算判断是否存在某子元素
 
-    render (h('h1', 'hello'), app)
+    let vnode1 =
+    h(
+      'h1',
+       {style: {color: 'pink'}},
+       [ 
+          h('div',{key:'a'},'a'),
+          h('div',{key:'b'},'b'),
+          h('div',{key:'d',
+           style: {color: 'orange'}},
+           'c'),
+          h('div',{key:'e', 
+          style: {color: 'orange'}},
+          'd'),
+          h('div',{key:'c', 
+          style: {color: 'orange'}},
+          'e'), 
+          h('div',{key:'f'},'f'),
+          h('div',{key:'g'},'g'),
+      ]
+    )
+
+    let vnode2 = 
+      h(
+      'h1',
+       {style: {color: 'orange'}},
+       [
+          h('div',{key:'a'},'a'),
+          h('div',{key:'b'},'b'),
+          h('div',{key:'c'},'c'),
+          h('div',{key:'d'},'d'),
+          h('div',{key:'e'},'e'),
+          h('div',{key:'f'},'f'),
+          h('div',{key:'g'},'g'),
+      ]
+    )
+    render(vnode2,app)
+  
 
     setTimeout(() => {
-      render(h('h1', 'okokok'), app)
+      render(vnode1, app)
     }, 1000);
   </script>
 </body>

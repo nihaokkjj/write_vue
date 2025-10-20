@@ -30,7 +30,8 @@ export function h
     return createVnode(type, null, propsOrChildren)
   } else {
     if(l > 3) {
-      children = Array.from(arguments).slice(2)
+      children = Array.prototype.slice.call(arguments, 2);
+      // children = Array.from(arguments).slice(2)
     } 
     if (l === 3 && isVnode(children)) { //只有一个儿子
       children = [children]

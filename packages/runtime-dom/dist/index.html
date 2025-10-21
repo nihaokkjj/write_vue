@@ -51,8 +51,12 @@
 
     //proxy: attrs(非响应式的, 生产环境下)
     //props(响应式, 开发环境下)
-    
+
     const VueComponent = {
+      props: {
+        name: String,
+        age: Number,
+      } ,
       render(proxy) {
         console.log(proxy)
         console.log('render')

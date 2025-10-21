@@ -270,19 +270,55 @@ export function createRenderer(renderOptions) {
     }
   }
 
-  const mountComponent = (n1, n2, container, anchor) => {
+  //初始化
+  const initProps = (instance, rawProps) => {
+
+    const props = {}
+    const attrs = {}
+    const propsOptions = instance.propsOptions || {}
+
+    if (rawProps) {
+      for (let key in rawProps) {
+        const value = rawProps[key]
+        if (key in propsOptions) {
+          props[key] = value
+        } else {
+          attrs[key] = attrs
+        }
+      }
+    }
+    instance.attrs = attrs
+    instance.props = props
+  }
+
+  const mountComponent = (vnode, container, anchor) => {
     //组件可以基于自己的状态重新渲染(effect)
-    const { data = () => {}, render } = n2.type
-    
+    const { 
+      data = () => {}, 
+      render,
+      props: propsOptions = {}
+    } = vnode.type
+    // console.log(propsOptions, '111')
     const state = reactive(data()) //组件状态
 
     const instance = {
       state, //状态
-      vnode: n2, //组件的虚拟节点
+      vnode, //组件的虚拟节点
       subTree: null, //子树
       isMounted: false, // 是否挂载完成
-      update: null //组件的更新的函数
+      update: null ,//组件的更新的函数
+      props: {}, //响应式, 方便开发
+      attrs: {}, //
+      propsOptions,
+      component: null
     }
+
+    //根据propsOptions来区分出props, attrs
+    vnode.component = instance
+    //元素更新 n2.el = n1.el
+    //组件更新 n2.component.subTree.el = n1.component.subTree.el
+    
+    initProps(instance, vnode.props)
 
     const componentUpdateFn = () => {
       const subTree = render.call(state, state)
@@ -316,7 +352,7 @@ export function createRenderer(renderOptions) {
   const processComponent = (n1, n2, container, anchor) => {
 
     if (n1 === null) {
-      mountComponent(n1, n2, container, anchor)
+      mountComponent(n2, container, anchor)
     } else {
       //组件更新
 

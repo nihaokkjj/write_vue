@@ -1,5 +1,8 @@
 import { ShapeFlags } from '@vue/shared'
-import { isSameVnode } from './createVnode'
+import { Fragment, isSameVnode, Text } from './createVnode'
+import getSquence from './seq'
+import { reactive, ReactiveEffect } from '@vue/reactivity'
+import queueJob from './scheduler'
 
 //core不关心如何渲染, 可以跨平台
 export function createRenderer(renderOptions) {
@@ -129,6 +132,9 @@ export function createRenderer(renderOptions) {
       let s2 = i
 
       const keyToNewIndexMap = new Map()
+      let toBePatched = e2 - s2 + 1 //倒叙插入的个数
+      //创建一个长度等于toBePatched的数组, 用来标记标记是否被标记
+      let newIndexToOldIndex = new Array(toBePatched).fill(0)
 
       for (let i = s2; i <= e2; ++i) {
         const vnode = c2[i]
@@ -137,19 +143,28 @@ export function createRenderer(renderOptions) {
       for (let i = s1; i <= e1; ++i) {
         const vnode = c1[i]
         const newIndex = keyToNewIndexMap.get(vnode.key)//通过key找索引
+        
         if(newIndex === undefined) {
-          //新的里面找不到, 就shanchu
+          //新的里面找不到, 就删除
           unmount(vnode)
         } else {
+          // console.log(newIndex - s2, i + 1)
+          newIndexToOldIndex[newIndex - s2] = i + 1 
+          //避免出现0的情况, 保证0是没有比对的情况
           //比较前后节点的差异, 更新属性和儿子
           patch(vnode, c2[newIndex], el)
         }
       }
+      // console.log(newIndexToOldIndex, '---')
       //调整顺序
       //按照新的队列, 倒序插入(通过insertBefore把原来的元素往后移)
 
       //插入过程中, 创建没有的元素
-      let toBePatched = e2 - s2 + 1 //倒叙插入的个数
+     
+      //最长递增子序列
+      let increasingSeq = getSquence(newIndexToOldIndex)
+     let j = increasingSeq.length - 1
+
       for (let i = toBePatched - 1; i >= 0; --i) {
         let nextIndex = s2 + i //h的索引, 找下一个元素作为参照物
         let anchor = c2[nextIndex + 1]?.el
@@ -158,12 +173,14 @@ export function createRenderer(renderOptions) {
         if (!vnode.el) {
           patch(null, vnode, el, anchor)
          } else {
-          hostInsert(vnode.el, el, anchor)
+          if (i == increasingSeq[j]) {
+            j--
+          }else {
+            hostInsert(vnode.el, el, anchor)
+          }
         }
       }
-      // console.log(keyToNewIndexMap)
     }
-    // console.log(i, e1, e2)
   }
 
   const patchChildren = (n1, n2, el) => {
@@ -231,6 +248,82 @@ export function createRenderer(renderOptions) {
     }
   }
 
+  const processText = (n1, n2, container) => {
+    if (n1 === null) {
+      hostInsert(
+        n2.el = hostCreateText(n2.children),
+        container
+      )
+    } else {
+      const el = n2.e = n1.el
+      if(n1.children !== n2.children) {
+        hostSetText(el, n2.children)
+      }
+    }
+  }
+
+  const processFragment = (n1, n2, container) => {
+    if (n1 === null) {
+      mountChildren(n2.children, container)
+    } else {
+      patchChildren(n1, n2, container)
+    }
+  }
+
+  const mountComponent = (n1, n2, container, anchor) => {
+    //组件可以基于自己的状态重新渲染(effect)
+    const { data = () => {}, render } = n2.type
+    
+    const state = reactive(data()) //组件状态
+
+    const instance = {
+      state, //状态
+      vnode: n2, //组件的虚拟节点
+      subTree: null, //子树
+      isMounted: false, // 是否挂载完成
+      update: null //组件的更新的函数
+    }
+
+    const componentUpdateFn = () => {
+      const subTree = render.call(state, state)
+      //区分挂载状态
+      if (!instance.isMounted) {
+        instance.subTree = subTree
+        patch(null, subTree, container, anchor)
+        instance.isMounted = true
+        instance.subTree = subTree
+      } else {
+        //基于状态的组件更新
+        patch(instance.subTree, subTree, container, anchor)
+        instance.subTree = subTree
+      }
+      
+    }
+  
+    const effect = 
+    new ReactiveEffect(
+      componentUpdateFn, 
+      () => queueJob(update)
+    )
+   
+    const update = instance.update = () => {
+      effect.run()
+    }
+    update()
+
+  }
+
+  const processComponent = (n1, n2, container, anchor) => {
+
+    if (n1 === null) {
+      mountComponent(n1, n2, container, anchor)
+    } else {
+      //组件更新
+
+    }
+
+  }
+
   const patch = (n1, n2, container, anchor = null) => {
     // console.log('n1',n1,'n2', n2)
     if(n1 === n2) { 
@@ -242,11 +335,33 @@ export function createRenderer(renderOptions) {
      unmount(n1)
      n1 = null //重新挂载新的
     }
-    processElement(n1, n2, container, anchor) //对元素处理
+    // debugger
+    const {type, shapeFlag} = n2
+    switch(type) {
+      case Text: 
+        processText(n1, n2, container)
+      break
+      case Fragment:
+        processFragment(n1, n2, container)
+        break
+      default:
+        if (shapeFlag & ShapeFlags.ELEMENT) {
+          processElement(n1, n2, container, anchor) //对元素处理
+        } else if (shapeFlag & ShapeFlags.COMPONENT) {
+          //对组件的处理
+          //Vue3中函数式组件已经废弃了, 没有性能节约
+          processComponent(n1, n2, container, anchor)
+        }
+        
+    }
   }
 
   const unmount = (vnode) => {
-    hostremove(vnode.el)
+    if (vnode.type === Fragment) {
+      unmountChildren(vnode.children)
+    } else {
+      hostremove(vnode.el)
+    }
   }
   //多次调用render, 会进行虚拟节点的比较, 进行更新
   const render = (vnode, container) => {
@@ -257,11 +372,11 @@ export function createRenderer(renderOptions) {
         if (container._vnode) {
           unmount(container._vnode)
         }
+    } else {
+      patch(container._vnode || null, vnode, container)
+      //将这次渲染的节点存下来, 便于下次修改
+      container._vnode = vnode
     }
-    patch(container._vnode || null, vnode, container)
-
-    //将这次渲染的节点存下来, 便于下次修改
-    container._vnode = vnode
   }
   return {
     render

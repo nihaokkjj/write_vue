@@ -6,7 +6,7 @@ export const nodeOps = {
   
   remove(el) {
     //移除dom元素
-    const parent = el.parentNode
+    const parent = el?.parentNode
     if (parent) parent.removeChild(el)
   },
   createElement: type => document.createElement(type),

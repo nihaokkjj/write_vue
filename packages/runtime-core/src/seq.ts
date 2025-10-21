@@ -1,4 +1,4 @@
-function getSquemce(arr) {
+export default function getSquence(arr) {
 
   let result = [0]
   let len = arr.length
@@ -9,7 +9,7 @@ function getSquemce(arr) {
     if (arrI !== 0) {
       //最后一项和当前遍历的数来比对
       let resultLast = arr[result[result.length - 1]] 
-      if (arrI > resultLast) {
+      if (arrI > arr[resultLast]) {
         p[i] = result[result.length - 1]
         result.push(i)
       } else {
@@ -39,7 +39,7 @@ function getSquemce(arr) {
     result[l] = last
     last = p[last]
   }
-
+  return result
 }
 //根据前驱节点找出最长的子序列, 因为最后一项不会错误,
 //从而找出完整正确的子序列

@@ -1,4 +1,3 @@
-
 import {isObject} from '@vue/shared'
 import { createVnode, isVnode} from './createVnode'
 //h(类型, 属性, 儿子)

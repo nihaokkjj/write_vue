@@ -8,75 +8,55 @@
 <body>
   <div id="app"></div>
   <script type="module">
-    // import { render } from './runtime-dom.js'
+    // import { render, h, Text, Fragment} from 
+    // "/node_modules/@vue/runtime-dom/dist/runtime-dom.esm-browser.js"
     import { render, h, Text, Fragment} from './runtime-dom.js'
   
     // let el = h("h1", [h("h2", "hello"), h("i", "llo")]) 
     //h将他们转换成二进制, 以便之后进行按位异或计算判断是否存在某子元素
 
     // VNode1: 1秒后渲染，作为新节点。H1粉色，子节点顺序：b, a, d, 54, 5, c, g
-    let vnode1 =
-    h(
-      'h1',
-       {style: {color: 'pink'}}, // 新父节点样式：粉色 (H1)
-       [ 
-          h('div',{key:'b'},'a'),
-          h('div',{key:'a'},'b'),
-          h(
-            'div'
-            ,{
-            key:'d',
-             style: {color: 'orange'}},
-              '7'), // 新子节点d样式：橙色
-          h(
-            'div'
-            ,{
-            key:'54', 
-            style: {color: 'orange'}},
-             'd'), // 新子节点54样式：橙色
-          h(
-            'div'
-            ,{
-            key:'5', 
-            style: {color: 'orange'}},
-             'h'),  // 新子节点5样式：橙色
-          h('div',{key:'c'},'f'),
-          h('div',{key:'g'},'g'),
-      ]
-    )
-    
-    // setTimeout(() => {
-    //   render(vnode1, app)
-    // }, 1500)
 
     //proxy: attrs(非响应式的, 生产环境下)
     //props(响应式, 开发环境下)
 
-    const VueComponent = {
+    const RenderComponent = {
       props: {
-        name: String,
-        age: Number,
-      } ,
-      render(proxy) {
-        console.log(proxy)
-        console.log('render')
-        Promise.resolve(() => {
-          console.log('ok')
-          // proxy.age = 200
-        })
-        return h(
-          'div',
-          [
-            h('h1', 'ooo' + proxy.$attrs.name),
-            h('h3', 'shoudao' + proxy.$atttr.age)
-          ]
-        )
+        address: String,
+      },
+      render() {
+        return h(Text, this.address)
       }
     }
-    render(
-      h(VueComponent,
-     {a: 1, name: '222', age: 90}), 
-     app)
+
+    const VueComponent = {
+      data() {
+        return {
+          flag: true,
+        }
+      },
+      render() {
+        // debugger
+        return h(Fragment, [
+          h(
+            'button',
+            {onClick: () => this.flag = !this.flag},
+            'look me'
+          ),
+          h(
+            RenderComponent,
+            {address: this.flag },
+            'rendercomponent'
+          ),
+          h(
+            'div',
+            this.flag
+          )
+        ])
+      }
+    }
+    render( h(VueComponent, {}), app)
+
   </script>
 </body>
 </html>

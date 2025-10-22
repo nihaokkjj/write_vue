@@ -20,6 +20,9 @@ export default function patchEvent(el, name, nextValue) {
 //之前没有存在过
   if (nextValue) {
     const invoker = (invokers[name] = createInvoker(nextValue))
+    console.log(el.addEventListener(eventName, invoker))
+    debugger
+
     return el.addEventListener(eventName, invoker)
   }
   //以前有现在没有

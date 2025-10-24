@@ -294,13 +294,23 @@ export function createRenderer(renderOptions) {
     updateProps(instance, instance.props, next.props)
   } 
 
+  const renderComponent = (instance) => {
+    const {render, vnode, proxy, propr, attrs} = instance
+
+    if (vnode.shapFlag & ShapeFlags.STATEFUL_COMPONENT) {
+      return render.call(proxy, proxy)
+    } else {
+      return vnode.type(attrs) //函数式组件
+    }
+  }
+
   function setupRenderEffect(instance, container, anchor, parentComponent) {
     const { render } = instance
     
     const componentUpdateFn = () => {
 
       const {bm, m} = instance
-      const subTree = render.call(instance.proxy, instance.proxy)
+      const subTree = renderComponent(instance)
       //区分挂载状态
       if (!instance.isMounted) {
         //onBeforeMount
@@ -464,6 +474,23 @@ export function createRenderer(renderOptions) {
       default:
         if (shapeFlag & ShapeFlags.ELEMENT) {
           processElement(n1, n2, container, anchor, parentComponent) //对元素处理
+        } else if (shapeFlag & ShapeFlags.TELEPORT) {
+          //用户手动渲染
+          type.process(
+            n1, n2, container, anchor, parentComponent, {
+              mountChildren,
+              patchChildren,
+              move(vnode, container, anchor) {
+                //此方法可以将元素或者dom元素移动到指定的位置
+                hostInsert(
+                  vnode.component 
+                  ? vnode.component.subTree.el : vnode.el,
+                  container,
+                  anchor
+                )
+              }
+            })
+
         } else if (shapeFlag & ShapeFlags.COMPONENT) {
           //对组件的处理
           //Vue3中函数式组件已经废弃了, 没有性能节约
@@ -480,7 +507,10 @@ export function createRenderer(renderOptions) {
       unmountChildren(vnode.children)
     } else if (shapeFlag & ShapeFlags.COMPONENT) {
       unmount(vnode.children.subTree)
-    }else {
+    } else if (shapeFlag & ShapeFlags.TELEPORT) {
+      vnode.type.remove(vnode, unmountChildren)
+
+    } else {
       hostremove(vnode.el)
     }
   }

@@ -7,6 +7,8 @@
 </head>
 <body>
   <div id="app"></div>
+  <div id="root"></div>
+  <div id="root2"></div>
   <script type="module">
     // import { 
     //   render, 
@@ -15,9 +17,11 @@
     //   Text, 
     //   Fragment,
     //   provide,
-    //   inject
+    //   inject,
+    //   Teleport
     // } from 
     // "/node_modules/@vue/runtime-dom/dist/runtime-dom.esm-browser.js"
+    
     import { 
      ref,
      render,
@@ -26,44 +30,21 @@
      Fragment,
      provide,
       inject,
+      Teleport
     } from './runtime-dom.js'
   
-    const p3 = {
-      setup(props) {
-        const name = inject("name")
-        
-        let age = inject("age", 20)
-        setInterval(() => {
-          age++
-        }, 1000)
-        return () => {
-          return h(
-            'div',
-            [
-               name.value,
-               age
-              ]
-            )
-        }
-      }
-    }
+    render(
+      h(Teleport, {to: '#root'},
+       [123, 'abc']),
+      app)
 
-    const p2= {
-      render() {
-         return h(p3)
-      }
-    }
-    const p1 = {
-      setup(props) {
-        const name = ref('jjj')
-        provide("name", name)
-        return () => {
-          return h(p2)
-        }
-      }
-    }
-    
-    render(h(p1), app)
+    setTimeout(() => {
+      render(
+      h(Teleport, {to: '#root2'},
+       [123, '2ee32321312c']),
+      app)
+    }, 6000)
+
   </script>
 </body>
 </html>

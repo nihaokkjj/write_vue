@@ -43,6 +43,7 @@
         console.log('beforemounted')
       })
       onMounted(() => {
+        console.log(getCurrentInstance())
         console.log('onMounted')
       })
       onUpdated(() => {

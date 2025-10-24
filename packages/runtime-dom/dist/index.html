@@ -8,28 +8,46 @@
 <body>
   <div id="app"></div>
   <script type="module">
+    // import { 
+    //   render, 
+    //   ref,
+    //    h, 
+    //   Text, 
+    //   Fragment,
+    //   provide,
+    //   inject
+    // } from 
+    // "/node_modules/@vue/runtime-dom/dist/runtime-dom.esm-browser.js"
     import { 
-      render, 
-      ref,
-       h, 
-      Text, 
-      Fragment,
-      provide,
-      inject
-    } from 
-    "/node_modules/@vue/runtime-dom/dist/runtime-dom.esm-browser.js"
-    // import { ref, render, h, Text, Fragment} from './runtime-dom.js'
+     ref,
+     render,
+     h, 
+     Text, 
+     Fragment,
+     provide,
+      inject,
+    } from './runtime-dom.js'
   
     const p3 = {
       setup(props) {
         const name = inject("name")
-        console.log(name)
-        const age = inject("age", 20)
+        
+        let age = inject("age", 20)
+        setInterval(() => {
+          age++
+        }, 1000)
         return () => {
-          return h('div',[ name.value, age])
+          return h(
+            'div',
+            [
+               name.value,
+               age
+              ]
+            )
         }
       }
     }
+
     const p2= {
       render() {
          return h(p3)

@@ -2,6 +2,7 @@
 function createInvoker(value) {
   const invoker = (e) => invoker.value(e)
   invoker.value = value
+  return invoker
 }
 
 export default function patchEvent(el, name, nextValue) {
@@ -20,8 +21,8 @@ export default function patchEvent(el, name, nextValue) {
 //之前没有存在过
   if (nextValue) {
     const invoker = (invokers[name] = createInvoker(nextValue))
-    console.log(el.addEventListener(eventName, invoker))
-    debugger
+    // console.log(el.addEventListener(eventName, invoker))
+    // debugger
 
     return el.addEventListener(eventName, invoker)
   }

@@ -8,55 +8,44 @@
 <body>
   <div id="app"></div>
   <script type="module">
-    // import { render, h, Text, Fragment} from 
-    // "/node_modules/@vue/runtime-dom/dist/runtime-dom.esm-browser.js"
-    import { render, h, Text, Fragment} from './runtime-dom.js'
+    import { 
+      render, 
+      ref,
+       h, 
+      Text, 
+      Fragment,
+      provide,
+      inject
+    } from 
+    "/node_modules/@vue/runtime-dom/dist/runtime-dom.esm-browser.js"
+    // import { ref, render, h, Text, Fragment} from './runtime-dom.js'
   
-    // let el = h("h1", [h("h2", "hello"), h("i", "llo")]) 
-    //h将他们转换成二进制, 以便之后进行按位异或计算判断是否存在某子元素
-
-    // VNode1: 1秒后渲染，作为新节点。H1粉色，子节点顺序：b, a, d, 54, 5, c, g
-
-    //proxy: attrs(非响应式的, 生产环境下)
-    //props(响应式, 开发环境下)
-
-    const RenderComponent = {
-      props: {
-        address: String,
-      },
-      render() {
-        return h(Text, this.address)
-      }
-    }
-
-    const VueComponent = {
-      data() {
-        return {
-          flag: true,
+    const p3 = {
+      setup(props) {
+        const name = inject("name")
+        console.log(name)
+        const age = inject("age", 20)
+        return () => {
+          return h('div',[ name.value, age])
         }
-      },
-      render() {
-        // debugger
-        return h(Fragment, [
-          h(
-            'button',
-            {onClick: () => this.flag = !this.flag},
-            'look me'
-          ),
-          h(
-            RenderComponent,
-            {address: this.flag },
-            'rendercomponent'
-          ),
-          h(
-            'div',
-            this.flag
-          )
-        ])
       }
     }
-    render( h(VueComponent, {}), app)
-
+    const p2= {
+      render() {
+         return h(p3)
+      }
+    }
+    const p1 = {
+      setup(props) {
+        const name = ref('jjj')
+        provide("name", name)
+        return () => {
+          return h(p2)
+        }
+      }
+    }
+    
+    render(h(p1), app)
   </script>
 </body>
 </html>

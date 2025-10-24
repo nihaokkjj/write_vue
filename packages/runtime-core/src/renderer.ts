@@ -4,6 +4,7 @@ import getSquence from './seq'
 import { ReactiveEffect } from '@vue/reactivity'
 import queueJob from './scheduler'
 import { createComponentInstance, setupComponent } from './component'
+import { invokeArray } from './apiLifecycle'
 
 //core不关心如何渲染, 可以跨平台
 export function createRenderer(renderOptions) {
@@ -256,7 +257,8 @@ export function createRenderer(renderOptions) {
         container
       )
     } else {
-      const el = n2.e = n1.el
+      // console.log(n2.el, n1.el)
+      const el = (n2.el = n1.el)
       if(n1.children !== n2.children) {
         hostSetText(el, n2.children)
       }
@@ -271,21 +273,54 @@ export function createRenderer(renderOptions) {
     }
   }
 
+  const updateComponentPreRender = (instance, next) => {
+    instance.next = null
+    instance.vnode = next
+    updateProps(instance, instance.props, next.props)
+  } 
+
   function setupRenderEffect(instance, container, anchor) {
     const { render } = instance
     
     const componentUpdateFn = () => {
+
+      const {bm, m} = instance
       const subTree = render.call(instance.proxy, instance.proxy)
       //区分挂载状态
       if (!instance.isMounted) {
+        //onBeforeMount
+        if (bm) {
+          invokeArray(bm)
+        }
+
         instance.subTree = subTree
         patch(null, subTree, container, anchor)
         instance.isMounted = true
         instance.subTree = subTree
+
+        //Mounted
+        if(m) {
+          invokeArray(m)
+        }
+
       } else {
+       const {next, bu, u} = instance
+       if (next) {
+        //更新属性或插槽
+        updateComponentPreRender(instance, next)
+       }
+       //onBeforeUpdate
+       if (bu) {
+        invokeArray(bu)
+       }
+
         //基于状态的组件更新
         patch(instance.subTree, subTree, container, anchor)
         instance.subTree = subTree
+       //onUpdated
+        if (u) {
+          invokeArray(u)
+        }
       }
     }
 
@@ -312,16 +347,76 @@ export function createRenderer(renderOptions) {
     setupRenderEffect(instance, container, anchor)
 
   }
+  //判断是否有改变
+  const hasPropsChange = (preProps, nextProps) => {
+    let nKeys = Object.keys(nextProps)
+    if (
+      Object.keys(nextProps).length !== 
+      Object.keys(preProps).length) {
+      return true
+    }
+    
+    for (let i = 0; i < nKeys.length; i++) {
+      const key = nKeys[i]
+
+      if (nextProps[key] !== preProps[key]) {
+        return true
+      }
+    }
+    return false
+  }
+  const updateProps = (instance, preProps, nextProps) => {
+    //给实例的属性赋一个新值
+    if (hasPropsChange(preProps, nextProps)) {
+      for(let key in nextProps) { //用新的覆盖所有老的
+        instance.props[key] = nextProps[key]
+      }
+
+      for (let key in instance.props) {
+        if(!(key in nextProps)) { //删除多余老的
+          delete instance.props[key]
+        }
+      }
+    }
+  }
+
+  const shouldComponentUpdate = (n1, n2) => {
+    const instance = (n2.component = n1.component)
+
+    //复用组件的实例
+    const {props: preProps, children: preChildren} = n1
+    const {props: nextProps, children: nextChildren} = n2
+
+    //有插槽直接走重新渲染
+    if (preChildren || nextChildren) return true
+
+    if(preProps === nextProps) return false
+    //如果属性不一致则更新
+    return hasPropsChange(preChildren, nextChildren)
+    // 新老更新实例 //instance.component.proxy 
+    // updateProps(instance, preProps, nextProps)
+  }
+  const updateComponent = (n1, n2) => {
+
+    const instance = (n2.component = n1.component)
+    
+    if (shouldComponentUpdate(n1, n2)) {
+      //如果有next属性, 说明是属性或插槽更新
+      // debugger
+      instance.next = n2
+      instance.update() //更新统一
+    }
+
+  }
 
   const processComponent = (n1, n2, container, anchor) => {
 
     if (n1 === null) {
-      debugger
+
       mountComponent(n2, container, anchor)
     } else {
       //组件更新
-      debugger
-      n1.props.address = '2'
+      updateComponent(n1, n2)
     }
 
   }
@@ -359,9 +454,13 @@ export function createRenderer(renderOptions) {
   }
 
   const unmount = (vnode) => {
+    
+    const {shapeFlag} = vnode
     if (vnode.type === Fragment) {
       unmountChildren(vnode.children)
-    } else {
+    } else if (shapeFlag & ShapeFlags.COMPONENT) {
+      unmount(vnode.children.subTree)
+    }else {
       hostremove(vnode.el)
     }
   }

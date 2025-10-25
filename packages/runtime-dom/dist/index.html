@@ -18,7 +18,8 @@
     //   Fragment,
     //   provide,
     //   inject,
-    //   Teleport
+    //   Teleport,
+    //   onMounted
     // } from 
     // "/node_modules/@vue/runtime-dom/dist/runtime-dom.esm-browser.js"
     
@@ -30,20 +31,38 @@
      Fragment,
      provide,
       inject,
-      Teleport
+      Teleport,
+      onMounted
     } from './runtime-dom.js'
   
-    render(
-      h(Teleport, {to: '#root'},
-       [123, 'abc']),
-      app)
+    const My = {
+      props: {
+        value: String,
+      },
+      setup(props, { emit, expose, slots, attrs }) {
+        expose({
+          a: 9090
+        })
+        return () => {
+          return h("div", props.value);
+        };
+      },
+    };
 
-    setTimeout(() => {
-      render(
-      h(Teleport, {to: '#root2'},
-       [123, '2ee32321312c']),
-      app)
-    }, 6000)
+    const VueComponent = {
+      setup(props, { emit, expose, slots, attrs }) {
+        const comp = ref('ppp') 
+
+        onMounted(() => {
+          console.log(comp.value.a)
+        })
+        return () => {
+          return h(My, { ref: comp, a:20 }); 
+        };
+      },
+    };
+
+    render(h(VueComponent), app)
 
   </script>
 </body>

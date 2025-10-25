@@ -1,5 +1,6 @@
 import { proxyRefs, reactive } from "@vue/reactivity"
 import { hasOwn, isFunction, ShapeFlags } from "@vue/shared"
+import { onMounted } from "./apiLifecycle"
 
 export  function createComponentInstance(vnode, parent) {
 
@@ -40,18 +41,19 @@ const handler = {
     } else if (setupState && hasOwn(setupState, key)) {
       return setupState[key]
     }
+
     const getter = publicProperty[key] 
     //通过不同的策略来访问对应的方法
     if (getter) {
       return getter(target)
     }
   },
+
   set(target, key, value) {
     const {data, props, setupState} = target
     if (data && hasOwn(data, key)) {
       data[key] = value
     } else if (props && hasOwn(props, key)) {
-      // props[key] = value
         console.log("cant't set props")
         return false
     } else if (setupState && hasOwn(setupState, key)) {
@@ -87,6 +89,7 @@ export function setupComponent(instance) {
   if (setup) {
 
     const setupContext = {
+
       slots: instance.slots,
       attrs: instance.attrs,
       expose(value) {
@@ -107,6 +110,10 @@ export function setupComponent(instance) {
     const setupResult = setup(instance.props, setupContext)
     unsetCurrentInstance()
 
+    onMounted(() => {
+      getCurrentInstance()
+    })
+    
     if (isFunction(setupResult)) {
       instance.render = setupResult
     } else {

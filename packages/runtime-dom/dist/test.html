@@ -40,7 +40,8 @@
       console.log("setup")
 
       onBeforeMount(() => {
-        console.log('beforemounted')
+        const instance = getCurrentInstance()
+        console.log('beforemounted', instance)
       })
       onMounted(() => {
         console.log(getCurrentInstance())

@@ -1,7 +1,7 @@
 import { ShapeFlags } from '@vue/shared'
 import { createVnode, Fragment, isSameVnode, Text } from './createVnode'
 import getSquence from './seq'
-import { ReactiveEffect } from '@vue/reactivity'
+import { isRef, ReactiveEffect } from '@vue/reactivity'
 import queueJob from './scheduler'
 import { createComponentInstance, setupComponent } from './component'
 import { invokeArray } from './apiLifecycle'
@@ -295,9 +295,9 @@ export function createRenderer(renderOptions) {
   } 
 
   const renderComponent = (instance) => {
-    const {render, vnode, proxy, propr, attrs} = instance
+    const {render, vnode, proxy, props, attrs} = instance
 
-    if (vnode.shapFlag & ShapeFlags.STATEFUL_COMPONENT) {
+    if (vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
       return render.call(proxy, proxy)
     } else {
       return vnode.type(attrs) //函数式组件
@@ -463,7 +463,7 @@ export function createRenderer(renderOptions) {
      n1 = null //重新挂载新的
     }
     // debugger
-    const {type, shapeFlag} = n2
+    const {type, shapeFlag, ref} = n2
     switch(type) {
       case Text: 
         processText(n1, n2, container)
@@ -498,6 +498,22 @@ export function createRenderer(renderOptions) {
         }
         
     }
+
+    if (ref !== null) {
+      //n2 是dom还是组件
+      setRef(ref, n2)
+    }
+  }
+  function setRef(rawRef, vnode) {
+    let value = vnode.shapeFlag & ShapeFlags.COMPONENT 
+     ? vnode.component.exposed 
+     || vnode.component.proxy
+     : vnode.el
+
+  
+     if (isRef(rawRef)) {
+      rawRef.value = value
+     }
   }
 
   const unmount = (vnode) => {

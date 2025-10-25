@@ -7,7 +7,6 @@ export const enum LifeCycle {
   UPDATED = "u"
 }
 
-
 function createHook(type) {
   //将当前的实例存到了此钩子上
   return (hook, target = currentInstance) => {

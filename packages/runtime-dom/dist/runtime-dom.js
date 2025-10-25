@@ -104,7 +104,7 @@ var ShapeFlags = /* @__PURE__ */ ((ShapeFlags2) => {
 
 // packages/shared/src/index.ts
 function isObject(value) {
-  return typeof value === "object" && value !== "null";
+  return typeof value === "object" && value !== null;
 }
 function isFunction(value) {
   return typeof value === "function";
@@ -168,7 +168,8 @@ function createVnode(type, props, children) {
     //diff算法后面需要key
     el: null,
     //虚拟节点需要对应的真实节点是谁
-    shapeFlag
+    shapeFlag,
+    ref: props?.ref
   };
   if (children) {
     if (Array.isArray(children)) {
@@ -661,6 +662,37 @@ function queueJob(job) {
   }
 }
 
+// packages/runtime-core/src/apiLifecycle.ts
+var LifeCycle = /* @__PURE__ */ ((LifeCycle2) => {
+  LifeCycle2["BEFORE_MOUNT"] = "bm";
+  LifeCycle2["MOUNTED"] = "m";
+  LifeCycle2["BEFORE_UPDAATE"] = "bu";
+  LifeCycle2["UPDATED"] = "u";
+  return LifeCycle2;
+})(LifeCycle || {});
+function createHook(type) {
+  return (hook, target = currentInstance) => {
+    if (target) {
+      const hooks = target[type] || (target[type] = []);
+      const wrapHook = () => {
+        setCurrentInstance(target);
+        hook.call(target);
+        unsetCurrentInstance();
+      };
+      hooks.push(wrapHook);
+    }
+  };
+}
+var onBeforeMount = createHook("bm" /* BEFORE_MOUNT */);
+var onMounted = createHook("m" /* MOUNTED */);
+var onBeforeUpdate = createHook("bu" /* BEFORE_UPDAATE */);
+var onUpdated = createHook("u" /* UPDATED */);
+function invokeArray(fns) {
+  for (let i = 0; i < fns.length; ++i) {
+    fns[i]();
+  }
+}
+
 // packages/runtime-core/src/component.ts
 function createComponentInstance(vnode, parent) {
   const instance = {
@@ -753,6 +785,9 @@ function setupComponent(instance) {
     setCurrentInstance(instance);
     const setupResult = setup(instance.props, setupContext);
     unsetCurrentInstance();
+    onMounted(() => {
+      getCurrentInstance();
+    });
     if (isFunction(setupResult)) {
       instance.render = setupResult;
     } else {
@@ -795,37 +830,6 @@ var setCurrentInstance = (instance) => {
 var unsetCurrentInstance = () => {
   currentInstance = null;
 };
-
-// packages/runtime-core/src/apiLifecycle.ts
-var LifeCycle = /* @__PURE__ */ ((LifeCycle2) => {
-  LifeCycle2["BEFORE_MOUNT"] = "bm";
-  LifeCycle2["MOUNTED"] = "m";
-  LifeCycle2["BEFORE_UPDAATE"] = "bu";
-  LifeCycle2["UPDATED"] = "u";
-  return LifeCycle2;
-})(LifeCycle || {});
-function createHook(type) {
-  return (hook, target = currentInstance) => {
-    if (target) {
-      const hooks = target[type] || (target[type] = []);
-      const wrapHook = () => {
-        setCurrentInstance(target);
-        hook.call(target);
-        unsetCurrentInstance();
-      };
-      hooks.push(wrapHook);
-    }
-  };
-}
-var onBeforeMount = createHook("bm" /* BEFORE_MOUNT */);
-var onMounted = createHook("m" /* MOUNTED */);
-var onBeforeUpdate = createHook("bu" /* BEFORE_UPDAATE */);
-var onUpdated = createHook("u" /* UPDATED */);
-function invokeArray(fns) {
-  for (let i = 0; i < fns.length; ++i) {
-    fns[i]();
-  }
-}
 
 // packages/runtime-core/src/renderer.ts
 function createRenderer(renderOptions2) {
@@ -1032,8 +1036,8 @@ function createRenderer(renderOptions2) {
     updateProps(instance, instance.props, next.props);
   };
   const renderComponent = (instance) => {
-    const { render: render3, vnode, proxy, propr, attrs } = instance;
-    if (vnode.shapFlag & 4 /* STATEFUL_COMPONENT */) {
+    const { render: render3, vnode, proxy, props, attrs } = instance;
+    if (vnode.shapeFlag & 4 /* STATEFUL_COMPONENT */) {
       return render3.call(proxy, proxy);
     } else {
       return vnode.type(attrs);
@@ -1140,7 +1144,7 @@ function createRenderer(renderOptions2) {
       unmount(n1);
       n1 = null;
     }
-    const { type, shapeFlag } = n2;
+    const { type, shapeFlag, ref: ref2 } = n2;
     switch (type) {
       case Text:
         processText(n1, n2, container);
@@ -1174,7 +1178,16 @@ function createRenderer(renderOptions2) {
           processComponent(n1, n2, container, anchor, parentComponent);
         }
     }
+    if (ref2 !== null) {
+      setRef(ref2, n2);
+    }
   };
+  function setRef(rawRef, vnode) {
+    let value = vnode.shapeFlag & 6 /* COMPONENT */ ? vnode.component.exposed || vnode.component.proxy : vnode.el;
+    if (isRef(rawRef)) {
+      rawRef.value = value;
+    }
+  }
   const unmount = (vnode) => {
     const { shapeFlag } = vnode;
     if (vnode.type === Fragment) {

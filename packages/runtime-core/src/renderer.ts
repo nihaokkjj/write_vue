@@ -1,9 +1,16 @@
 import { ShapeFlags } from '@vue/shared'
-import { createVnode, Fragment, isSameVnode, Text } from './createVnode'
+import { 
+  createVnode, 
+  Fragment, 
+  isSameVnode, 
+  Text } from './createVnode'
 import getSquence from './seq'
 import { isRef, ReactiveEffect } from '@vue/reactivity'
 import queueJob from './scheduler'
-import { createComponentInstance, setupComponent } from './component'
+import { 
+  createComponentInstance, 
+  setupComponent 
+} from './component'
 import { invokeArray } from './apiLifecycle'
 
 //core不关心如何渲染, 可以跨平台
@@ -22,6 +29,7 @@ export function createRenderer(renderOptions) {
   } = renderOptions
 
   const normalize = (children) => {
+    if (!Array.isArray(children)) children = [children]
     
     for (let i = 0; i < children.length; ++i) {
       if (typeof children[i] === 'string' 
@@ -44,16 +52,18 @@ export function createRenderer(renderOptions) {
   }
 
   const mountElement = (vnode, container, anchor, parentComponent) => {
-    const {type, children, props, shapeFlag} = vnode
+    // debugger
+    const {type, children, props, shapeFlag, transition} = vnode
     //第一次渲染的时候让虚拟节点和真实的dom关联, vnode.el = 真实dom
     //后面渲染时, 和前面的做比对, 更新对应el
 
-
     let el = (vnode.el = hostCreateElement(type))
     
+
     if(props) {
       for (let key in props) {
         //增加属性
+        if (key === 'ref') continue
         hostPatchProp(el, key, null, props[key])
       }
     }
@@ -64,11 +74,21 @@ export function createRenderer(renderOptions) {
     } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
       mountChildren(children, el, parentComponent)
     }
+
+    
+    if (transition) {
+      transition.beforeEnter(el)
+    }
   
     hostInsert(el, container, anchor)
+
+    if (transition) {
+      transition.enter(el)
+    }
   }
 
   const patchProps = (oldProps, newProps, el) => {
+    
     //新的全部生效
     for (let key in newProps) {
       hostPatchProp(el, key, oldProps[key], newProps[key])
@@ -245,7 +265,6 @@ export function createRenderer(renderOptions) {
   }
 
   const patchElement = (n1, n2, container, parentComponent) => {
-    // debugger
     //比较差异, 复用dom元素
     let el = n2.el = n1.el
 
@@ -292,15 +311,18 @@ export function createRenderer(renderOptions) {
     instance.next = null
     instance.vnode = next
     updateProps(instance, instance.props, next.props)
+
+    //  组件更新插槽
+    Object.assign(instance.slots, next.children)
   } 
 
   const renderComponent = (instance) => {
-    const {render, vnode, proxy, props, attrs} = instance
+    const {render, vnode, proxy, props, attrs, slots} = instance
 
     if (vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
       return render.call(proxy, proxy)
     } else {
-      return vnode.type(attrs) //函数式组件
+      return vnode.type(attrs, {slots}) //函数式组件
     }
   }
 
@@ -457,6 +479,13 @@ export function createRenderer(renderOptions) {
       //两次渲染同一个元素直接跳过
       return
     }
+    if (n2 === null) {
+      if (n1) {
+        unmount(n1)
+      }
+      return
+    }
+
     //移除老的, 删除新的
     if (n1 && !isSameVnode(n1, n2)) {
      unmount(n1)
@@ -509,7 +538,6 @@ export function createRenderer(renderOptions) {
      ? vnode.component.exposed 
      || vnode.component.proxy
      : vnode.el
-
   
      if (isRef(rawRef)) {
       rawRef.value = value
@@ -517,16 +545,25 @@ export function createRenderer(renderOptions) {
   }
 
   const unmount = (vnode) => {
-    
-    const {shapeFlag} = vnode
+     if(!vnode) return
+    const {shapeFlag, transition, el} = vnode
+
+    const performRemove = () => {
+      hostremove(vnode.el)
+    }
     if (vnode.type === Fragment) {
       unmountChildren(vnode.children)
     } else if (shapeFlag & ShapeFlags.COMPONENT) {
-      unmount(vnode.children.subTree)
+      if (vnode.component && vnode.component.subTree) {
+        unmount(vnode.component.subTree)
+      }
     } else if (shapeFlag & ShapeFlags.TELEPORT) {
       vnode.type.remove(vnode, unmountChildren)
-
     } else {
+      
+      if (transition) {
+        transition.leave(el, performRemove)
+      } else 
       hostremove(vnode.el)
     }
   }

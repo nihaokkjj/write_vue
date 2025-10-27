@@ -7,8 +7,18 @@
 </head>
 <body>
   <div id="app"></div>
-  <div id="root"></div>
-  <div id="root2"></div>
+
+  <style>
+    .v-enter-active,
+    .v-leave-active {
+      transition: opacity 2s ease;
+    }
+    .v-enter-from, /* 动画起点 */
+    .v-leave-to { /* 离开终点 */
+      opacity: 0; /* 或 0 */
+    }
+
+  </style>
   <script type="module">
     // import { 
     //   render, 
@@ -19,7 +29,8 @@
     //   provide,
     //   inject,
     //   Teleport,
-    //   onMounted
+    //   onMounted,
+    //   defineAsyncComponent,
     // } from 
     // "/node_modules/@vue/runtime-dom/dist/runtime-dom.esm-browser.js"
     
@@ -30,40 +41,65 @@
      Text, 
      Fragment,
      provide,
-      inject,
-      Teleport,
-      onMounted
+    inject,
+    Teleport,
+    onMounted,
+    Transition,
+    defineAsyncComponent,
     } from './runtime-dom.js'
-  
-    const My = {
-      props: {
-        value: String,
-      },
-      setup(props, { emit, expose, slots, attrs }) {
-        expose({
-          a: 9090
-        })
-        return () => {
-          return h("div", props.value);
-        };
-      },
-    };
 
-    const VueComponent = {
-      setup(props, { emit, expose, slots, attrs }) {
-        const comp = ref('ppp') 
 
-        onMounted(() => {
-          console.log(comp.value.a)
-        })
-        return () => {
-          return h(My, { ref: comp, a:20 }); 
-        };
-      },
-    };
+  let attempts = 0
+  const MyComponent = defineAsyncComponent({
+  loader: () => {
+    return new Promise((resolve, reject) => {
+      setTimeout(() => {
+        if(attempts++ < 2) {
+          reject({
+            setup() {
+              // 添加setup函数确保组件正确初始化
+              return () => h('div', 'first')
+            }
+          })
+        } else {
+          resolve({
+            setup() {
+              // 添加setup函数确保组件正确初始化
+              return () => h('div', 'second')
+            }
+          })
+        }
+      }, 3000)
+    })
+  },
+  timeout: 1000,
+  errorComponent: {
+    setup() {
+      return () => h('div', 'Error')
+    }
+  },
 
-    render(h(VueComponent), app)
+  delay: 500,
+  loadingComponent: {
+    setup() {
+      return () => h('div', 'loading~')
+    }
+  },
 
+  onError(err, retry, fail, attempts) {
+    console.log(attempts)
+    setTimeout(() => {
+      retry()
+      console.log('loading~')
+    }, 1000)
+  }
+})
+
+// 确保DOM元素存在
+const app = document.querySelector('#app')
+if (app) {
+  render(h(MyComponent), app)
+}
   </script>
 </body>
 </html>

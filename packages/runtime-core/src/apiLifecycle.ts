@@ -1,4 +1,8 @@
-import { currentInstance, setCurrentInstance, unsetCurrentInstance } from "./component"
+import { 
+  currentInstance, 
+  setCurrentInstance, 
+  unsetCurrentInstance 
+} from "./component"
 
 export const enum LifeCycle {
   BEFORE_MOUNT = "bm",

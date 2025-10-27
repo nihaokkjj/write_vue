@@ -23,6 +23,7 @@ export  function createComponentInstance(vnode, parent) {
     provides: parent ? parent.provides : Object.create(null)
   }
   return instance
+  
 }
 
 const publicProperty = {
@@ -110,9 +111,6 @@ export function setupComponent(instance) {
     const setupResult = setup(instance.props, setupContext)
     unsetCurrentInstance()
 
-    onMounted(() => {
-      getCurrentInstance()
-    })
     
     if (isFunction(setupResult)) {
       instance.render = setupResult

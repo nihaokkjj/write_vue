@@ -1,4 +1,4 @@
-// packages/compiler-core/src/index.ts
+// packages/compiler-core/src/parser.ts
 function createParserContext(content) {
   return {
     originalSource: content,
@@ -208,7 +208,62 @@ function parse(template) {
   const context = createParserContext(template);
   return createRoot(parseChildren(context));
 }
+
+// packages/compiler-core/src/index.ts
+function transformElement(node, context) {
+  if (1 /* ELEMENT */ === node.type)
+    console.log("\u5904\u7406\u5143\u7D20");
+}
+function transformText(node, context) {
+  if (1 /* ELEMENT */ === node.type || 0 /* ROOT */ === node.type)
+    console.log("\u5143\u7D20\u4E2D\u542B\u6709\u6587\u672C");
+  console.log("\u5904\u7406\u6587\u672C");
+}
+function transformExpression(node, context) {
+  if (5 /* INTERPOLATION */ === node.type)
+    console.log("\u5904\u7406\u63D2\u503C");
+  console.log("\u5904\u7406\u8868\u8FBE\u5F0F");
+}
+function createTransformContext(root) {
+  const context = {
+    currentNode: root,
+    parent: null,
+    //createElementVnode createTextVnode createCommentVnode
+    transformNode: [transformElement, transformText, transformExpression],
+    helpers: /* @__PURE__ */ new Map(),
+    helper(name) {
+      let count = context.helpers.get(name) || 0;
+      context.helpers.set(name, count + 1);
+      return name;
+    }
+  };
+  return context;
+}
+function traverseNode(node, context) {
+  context.currentNode = node;
+  const transforms = context.transformNode;
+  for (let i = 0; i < transforms.length; i++) {
+    transforms[i](node, context);
+  }
+  switch (node.type) {
+    case 0 /* ROOT */:
+    case 1 /* ELEMENT */:
+      for (let i = 0; i < node.children.length; i++) {
+        context.parent = node;
+        traverseNode(node.children[i], context);
+      }
+  }
+}
+function transform(ast) {
+  const context = createTransformContext(ast);
+  traverseNode(ast, context);
+}
+function compile(template) {
+  const ast = parse(template);
+  transform(ast);
+}
 export {
+  compile,
   parse
 };
 //# sourceMappingURL=compiler-core.js.map

@@ -12,6 +12,8 @@ import {
   setupComponent 
 } from './component'
 import { invokeArray } from './apiLifecycle'
+import { PatchFlags } from 'packages/shared/src/patchFlags'
+
 
 //core不关心如何渲染, 可以跨平台
 export function createRenderer(renderOptions) {
@@ -29,7 +31,7 @@ export function createRenderer(renderOptions) {
   } = renderOptions
 
   const normalize = (children) => {
-    if (!Array.isArray(children)) children = [children]
+    if (!Array.isArray(children)) return
     
     for (let i = 0; i < children.length; ++i) {
       if (typeof children[i] === 'string' 
@@ -40,14 +42,14 @@ export function createRenderer(renderOptions) {
     return children
   }
 
-  const mountChildren = (children, container, parentComponent) => {
+  const mountChildren = (children, container,anchor, parentComponent) => {
   
     normalize(children)
     for (let i = 0; i < children.length; ++i) {
       
       let child = children[i]
 
-      patch(null, child, container, parentComponent)
+      patch(null, child, container, )
     }
   }
 
@@ -72,7 +74,7 @@ export function createRenderer(renderOptions) {
     if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
       hostSetElementText(el, children)
     } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-      mountChildren(children, el, parentComponent)
+      mountChildren(children, el, anchor, parentComponent)
     }
 
     
@@ -220,7 +222,7 @@ export function createRenderer(renderOptions) {
     }
   }
 
-  const patchChildren = (n1, n2, el, parentComponent) => {
+  const patchChildren = (n1, n2, el, anchor,parentComponent) => {
     const c1 = n1.children
     const c2 = normalize(n2.children)
 
@@ -258,21 +260,69 @@ export function createRenderer(renderOptions) {
         }
         //新不是空
         if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-          mountChildren(c2, el, parentComponent) //挂载新数组
+          mountChildren(c2, el, anchor, parentComponent) //挂载新数组
         }
       }
     }
   }
 
-  const patchElement = (n1, n2, container, parentComponent) => {
+  const patchBlockChildren = (n1, n2, el, anchor, parentComponent) => {
+    // debugger
+    for (let i = 0; i < n2.dynamicChildren.length; ++i) {
+      patch(
+        n1.dynamicChildren[i],
+        n2.dynamicChildren[i],
+        el,
+        anchor, 
+        parentComponent
+      )
+    }
+  }
+  const patchElement = (n1, n2, container, anchor, parentComponent) => {
     //比较差异, 复用dom元素
     let el = n2.el = n1.el
 
     let oldProps = n1.props || {}
     let newProps = n2.props || {}
     //hostPatchProp 只针对某一个属性来处理
-    patchProps(oldProps, newProps, el)
-    patchChildren(n1, n2, el, parentComponent)
+
+    //在比较元素的时候, 针对某个熟悉的属性, 优化性能
+    const {patchFlag, dynamicChildren} = n2
+    // debugger
+    console.log('patchFlag', patchFlag)
+
+    if (patchFlag) {
+      if (patchFlag & PatchFlags.TEXT) {
+        //只要儿子是动态的, 只比较本文
+        if (n1.children !== n2.children) {
+          return hostSetElementText(el, n2.children)
+        }
+      }
+      if(patchFlag & PatchFlags.STYLE) {
+        return hostPatchProp(
+          el,
+          'style', 
+          oldProps.style, 
+          newProps.style
+        )
+      }
+      if(patchFlag & PatchFlags.CLASS) {
+        return hostPatchProp(el, 'class', oldProps.class, newProps.class )
+      }
+    }else {
+      //一一比对
+      patchProps(oldProps, newProps, el)
+    }
+
+    //有动态数组, 线性比对
+    // console.log('dynamicChildren', dynamicChildren)
+    if (dynamicChildren) {
+      patchBlockChildren(n1, n2, el, anchor, parentComponent)
+    } else {
+      //全量diff
+      patchChildren(n1, n2, el, anchor, parentComponent)
+    }
+    
   }
 
   const processElement = (n1, n2, container, anchor, parentComponent) => {
@@ -280,7 +330,7 @@ export function createRenderer(renderOptions) {
       mountElement(n2, container, anchor, parentComponent)
     } else {
       //对旧节点的复用
-      patchElement(n1, n2, container, parentComponent)
+      patchElement(n1, n2, container, anchor, parentComponent)
     }
   }
 
@@ -299,11 +349,11 @@ export function createRenderer(renderOptions) {
     }
   }
 
-  const processFragment = (n1, n2, container, parentComponent) => {
+  const processFragment = (n1, n2, container, anchor, parentComponent) => {
     if (n1 === null) {
-      mountChildren(n2.children, container, parentComponent)
+      mountChildren(n2.children, container, anchor, parentComponent)
     } else {
-      patchChildren(n1, n2, container, parentComponent)
+      patchChildren(n1, n2, container, anchor,parentComponent)
     }
   }
 
@@ -498,7 +548,7 @@ export function createRenderer(renderOptions) {
         processText(n1, n2, container)
       break
       case Fragment:
-        processFragment(n1, n2, container, parentComponent)
+        processFragment(n1, n2, container, anchor, parentComponent)
         break
       default:
         if (shapeFlag & ShapeFlags.ELEMENT) {
@@ -523,7 +573,11 @@ export function createRenderer(renderOptions) {
         } else if (shapeFlag & ShapeFlags.COMPONENT) {
           //对组件的处理
           //Vue3中函数式组件已经废弃了, 没有性能节约
-          processComponent(n1, n2, container, anchor, parentComponent)
+          processComponent(
+            n1, n2, 
+            container, 
+            anchor, 
+            parentComponent)
         }
         
     }

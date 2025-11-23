@@ -12,13 +12,12 @@ export const mutableHandlers: ProxyHandler<any> = {
   get(target, key, recevier) {
     if (key === ReactiveFlags.IS_REACTIVE) {
       return true
-    }
-    // debugger
-    track(target, key) 
+    } 
     //收集这个对象上的这个属性, 和effect关联在一起
 
     //当取值的时候, 应该让响应式属性 和 effect 映射起来
     let res = Reflect.get(target, key, recevier)
+    track(target, key)
     
     //当取值为对象时, 需要再对这个对象进行代理
     if (isObject(res)) {

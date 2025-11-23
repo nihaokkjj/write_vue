@@ -7,7 +7,7 @@ const resolvePromise = Promise.resolve()
 //如果在一个状态中跟新多个状态, job为同一个
 //同时开启一个异步任务
 export default function queueJob (job) {
-  // console.log(job, 'job')
+
   if (!queue.includes(job)) { //去重
     queue.push(job) //让任务入队列
   }

@@ -8,59 +8,65 @@
 <body>
   <div id="app"></div>
   <script type="module">
-  // import {
-  //   render,
-  //   h,
-  //   Text,
-  //   Fragment,
-  //   ref,
-  //   onMounted,
-  //   onBeforeMount,
-  //   onBeforeUpdate,
-  //   onUpdated
-  // } from "/node_modules/@vue/runtime-dom/dist/runtime-dom.esm-browser.js"
-  import {
-    render,
-    h,
-    Text,
-    Fragment,
-    ref,
-    onMounted,
-    onBeforeMount,
-    onBeforeUpdate,
-    onUpdated,
-    getCurrentInstance
-  } from "./runtime-dom.js"
   
+  // import { 
+  //    ref,
+  //    render,
+  //    h, 
+  //    Text, 
+  //    Fragment,
+  //    provide,
+  //   inject,
+  //   Teleport,
+  //   onMounted,
+  //   Transition,
+  //   defineAsyncComponent,
+  //   reactive,
+  //   toRefs
+  //   } from './runtime-dom.js'
+ 
+ import {
+  createElementVNode as _createElementVNode,
+  toDisplayString as _toDisplayString,
+  openBlock as _openBlock,
+  createElementVNode as _createElementVNode,
+  createElementBlock as _createElementBlock,
+  render,
+  reactive,
+  toRefs,
+  h
+} from "./runtime-dom.js"
+// "/node_modules/vue/dist/vue.esm-browser.js";
 
-  const VueComponent = {
-    
-     setup(props, {}) {
-      console.log(getCurrentInstance(), "child")
-      console.log("setup")
-
-      onBeforeMount(() => {
-        const instance = getCurrentInstance()
-        console.log('beforemounted', instance)
-      })
-      onMounted(() => {
-        console.log(getCurrentInstance())
-        console.log('onMounted')
-      })
-      onUpdated(() => {
-        console.log('updated')
-      })
-      const a = ref("a")
+  const MyComponent = {
+    setup() {
+      const state = reactive({ name: 'ksj'})
       setTimeout(() => {
-        a.value = 'p'
-      }, 2000)
-
-      return (proxy) => {
-        return h("div", a.value)
+        state.name = 'handlesome'
+      }, 1500)
+      return {
+        ...toRefs(state)
       }
-     }
+    },
+
+    render(_ctx) {
+     const vnode = (
+      _openBlock(),
+       _createElementBlock("div", null, 
+       [
+        _createElementVNode("h1", null, "Hello hello"),
+        _createElementVNode("span", null,
+         _toDisplayString(_ctx.name), 1 )
+      ])
+      );
+      console.log(vnode)
+      return vnode
     }
-    render( h(VueComponent),app)
+  }
+
+
+
+render(h(MyComponent), app)
 </script>
 
 </body>

@@ -56,15 +56,14 @@
       setTimeout(() => {
         if(attempts++ < 2) {
           reject({
-            setup() {
-              // 添加setup函数确保组件正确初始化
+           setup() {
+  
               return () => h('div', 'first')
             }
           })
         } else {
           resolve({
             setup() {
-              // 添加setup函数确保组件正确初始化
               return () => h('div', 'second')
             }
           })

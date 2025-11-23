@@ -1,10 +1,10 @@
 {
-  "name": "@vue/reactivity",
+  "name": "@vue/compiler-core",
   "version": "1.0.0",
-  "module": "dist/reactivity.esm-bundler.js",
-  "unpkg": "dist/reactivity.global.js",
+  "module": "dist/compiler-core.esm-bundler.js",
+  "unpkg": "dist/compiler-core.global.js",
   "buildOptions": {
-    "name": "Vuereactivity",
+    "name": "VuecompilerCore",
     "formats": [
       "esm-bundler",
       "esm-browser",

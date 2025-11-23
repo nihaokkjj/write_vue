@@ -115,24 +115,57 @@ function getSelection(context, start) {
 	}
 }
 
+function parseAttributeValue(context) {
+	const quote = context.source[0]
+
+	const isQuoted = quote === '"' || quote === "'"
+
+	let content
+	if (isQuoted) {
+		advanceBy(context, 1) //删除引号
+		const endIndex = context.source.indexOf(quote, 1)
+
+		content = parseTextData(context, endIndex)
+		advanceBy(context, 1) //删除引号
+	} else {
+		//没有引号
+		content = context.source.match(/([^ \t\r\n/>])+/)[1]
+
+		advanceBy(context, content.length)
+		advanceSpaces(context)
+	}
+	return content
+}
 function parseAttribute(context) {
+	const start = getCursor(context)
 
-  const start = getCursor(context)
+	//删除一个属性 "a = '1'"中的 a
+	let match = /^[^\t\r\n\f />][^\t\r\n\f />=]*/.exec(context.source)
 
-  //删除一个属性 a = "1"
-  let match = /^[^\t\r\n\f />][^\t\r\n\f />=]*/.exec(context.source)
+	const name = match[0]
 
-  const name = match[0]
-  advanceBy(context, match[0].length)
+	advanceBy(context, match[0].length)
+
+	let value
+	//对于 "a   = '1'"这种情况
+	if (/^[\t\r\n\f ]*=/.test(context.source)) {
+		advanceSpaces(context)
+		advanceBy(context, 1) //删除 =
+		advanceSpaces(context)
+
+		value = parseAttributeValue(context)
+	}
+
+	let loc = getSelection(context, start)
 	return {
 		type: NodeTypes.ATTRIBUTE,
 		name,
 		value: {
 			type: NodeTypes.TEXT,
-			content: '?',
-			loc: '?',
+			content: value,
+			loc,
 		},
-    loc: getSelection(context, start),
+		loc: getSelection(context, start),
 	}
 }
 function parseAttributes(context) {
@@ -171,6 +204,7 @@ function parseTag(context) {
 		isSelfClosing,
 		loc: getSelection(context, start), //开头标签解析后的信息
 		props,
+		children: [],
 	}
 }
 
@@ -179,7 +213,7 @@ function parseElement(context) {
 
 	//如果不是自闭合标签, 递归解析子节点
 	if (!ele.isSelfClosing) {
-		const children = parseChildren(context)
+		ele.children = parseChildren(context)
 
 		if (context.source.startsWith('</')) {
 			const endTag = parseTag(context)
@@ -216,7 +250,21 @@ function parseChildren(context) {
 		}
 		nodes.push(node)
 	}
-	return nodes
+
+	for (let i = 0; i < nodes.length; i++) {
+		let node = nodes[i]
+
+		if (node.type === NodeTypes.TEXT) {
+			//对空白字符做处理
+			if (!/[^\t\r\n\f ]/.test(node.content)) {
+				nodes[i] = null
+			} else {
+        node.content = node.content.replace(/[\t\r\n\f ]+/g, ' ')
+      }
+		}
+	}
+	//清空空白节点
+	return nodes.filter(Boolean)
 }
 
 function createRoot(children) {

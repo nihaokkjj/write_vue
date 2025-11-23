@@ -89,18 +89,42 @@ function getSelection(context, start) {
     source: context.originalSource.slice(start.offset, end.offset)
   };
 }
+function parseAttributeValue(context) {
+  const quote = context.source[0];
+  const isQuoted = quote === '"' || quote === "'";
+  let content;
+  if (isQuoted) {
+    advanceBy(context, 1);
+    const endIndex = context.source.indexOf(quote, 1);
+    content = parseTextData(context, endIndex);
+    advanceBy(context, 1);
+  } else {
+    content = context.source.match(/([^ \t\r\n/>])+/)[1];
+    advanceBy(context, content.length);
+    advanceSpaces(context);
+  }
+  return content;
+}
 function parseAttribute(context) {
   const start = getCursor(context);
   let match = /^[^\t\r\n\f />][^\t\r\n\f />=]*/.exec(context.source);
   const name = match[0];
   advanceBy(context, match[0].length);
+  let value;
+  if (/^[\t\r\n\f ]*=/.test(context.source)) {
+    advanceSpaces(context);
+    advanceBy(context, 1);
+    advanceSpaces(context);
+    value = parseAttributeValue(context);
+  }
+  let loc = getSelection(context, start);
   return {
     type: 6 /* ATTRIBUTE */,
     name,
     value: {
       type: 2 /* TEXT */,
-      content: "?",
-      loc: "?"
+      content: value,
+      loc
     },
     loc: getSelection(context, start)
   };
@@ -128,13 +152,14 @@ function parseTag(context) {
     isSelfClosing,
     loc: getSelection(context, start),
     //开头标签解析后的信息
-    props
+    props,
+    children: []
   };
 }
 function parseElement(context) {
   const ele = parseTag(context);
   if (!ele.isSelfClosing) {
-    const children = parseChildren(context);
+    ele.children = parseChildren(context);
     if (context.source.startsWith("</")) {
       const endTag = parseTag(context);
       if (endTag.tag !== ele.tag) {
@@ -161,7 +186,17 @@ function parseChildren(context) {
     }
     nodes.push(node);
   }
-  return nodes;
+  for (let i = 0; i < nodes.length; i++) {
+    let node = nodes[i];
+    if (node.type === 2 /* TEXT */) {
+      if (!/[^\t\r\n\f ]/.test(node.content)) {
+        nodes[i] = null;
+      } else {
+        node.content = node.content.replace(/[\t\r\n\f ]+/g, " ");
+      }
+    }
+  }
+  return nodes.filter(Boolean);
 }
 function createRoot(children) {
   return {

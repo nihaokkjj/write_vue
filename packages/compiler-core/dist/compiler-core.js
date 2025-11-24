@@ -1,10 +1,21 @@
 // packages/compiler-core/src/runtimeHelper.ts
 var TO_DISPLAY_STRING = Symbol("TO_DISPLAY_STRING");
 var CREATE_TEXT_VNODE = Symbol("CREATE_TEXT_VNODE");
+var CREATE_ELEMENT_VNODE = Symbol("CREATE_ELEMENT_VNODE");
 var helperMap = {
   [TO_DISPLAY_STRING]: "toDisplayString",
-  [CREATE_TEXT_VNODE]: "createTextVNode"
+  [CREATE_TEXT_VNODE]: "createTextVNode",
+  [CREATE_ELEMENT_VNODE]: "createElementVNode"
 };
+function createVnodeCall(context, tag, props, children) {
+  context.helper(CREATE_ELEMENT_VNODE);
+  return {
+    type: 13 /* VNODE_CALL */,
+    tag,
+    props,
+    children
+  };
+}
 
 // packages/compiler-core/src/ast.ts
 function createCallExpression(context, args) {
@@ -227,9 +238,20 @@ function parse(template) {
   return createRoot(parseChildren(context));
 }
 
-// packages/compiler-core/src/index.ts
+// packages/compiler-core/src/transform.ts
 function transformElement(node, context) {
-  if (1 /* ELEMENT */ === node.type) console.log("\u5904\u7406\u5143\u7D20");
+  if (1 /* ELEMENT */ === node.type) {
+    return function() {
+      const tag = JSON.stringify(node.tag);
+      let props = null;
+      let children = node.children;
+      const vnodeCall = createVnodeCall(context, tag, props, children);
+      context.currentNode = vnodeCall;
+      if (context.parent.type === 0 /* ROOT */) {
+        context.parent.codegenNode = vnodeCall;
+      }
+    };
+  }
 }
 function isText(node) {
   return 2 /* TEXT */ === node.type || 5 /* INTERPOLATION */ === node.type;
@@ -237,26 +259,24 @@ function isText(node) {
 function transformText(node, context) {
   if (1 /* ELEMENT */ === node.type || 0 /* ROOT */ === node.type) {
     return function() {
-      console.log("\u6587\u672C\u5904\u7406\u540E\u89E6\u53D1");
       const children = node.children;
       let container = null;
-      let hasText = false;
-      for (let i = 0; i < children.length; i++) {
-        let child = children[i];
+      for (let i = children.length - 1; i >= 0; i--) {
+        const child = children[i];
         if (isText(child)) {
-          hasText = true;
-          for (let j = i + 1; j < children.length; j++) {
-            const next = children[j];
-            if (isText(next)) {
+          for (let j = i - 1; j >= 0; j--) {
+            const prev = children[j];
+            if (isText(prev)) {
               if (!container) {
                 container = children[i] = {
                   type: 8 /* COMPOUND_EXPRESSION */,
                   children: [child]
+                  // 当前节点作为容器的第一个子节点
                 };
               }
-              container.children.push(`+`, next);
+              container.children.unshift(prev);
               children.splice(j, 1);
-              j--;
+              i--;
             } else {
               container = null;
               break;
@@ -264,24 +284,12 @@ function transformText(node, context) {
           }
         }
       }
-      if (!hasText && children.length === 1) {
-        return;
-      }
-      for (let i = 0; i < children.length; i++) {
-        const child = children[i];
-        if (isText(child) || child.type === 8 /* COMPOUND_EXPRESSION */) {
-          const args = [];
-          args.push(child);
-          if (child.type === 2 /* TEXT */) {
-            args.push(1 /* TEXT */);
-          }
-          children[i] = {
-            type: 12 /* TEXT_CALL */,
-            //vreateTextVnode
-            content: child,
-            codegenNode: createCallExpression(context, args)
-          };
-        }
+      if (children.length === 1 && children[0].type === 8 /* COMPOUND_EXPRESSION */) {
+        children[0] = {
+          type: 12 /* TEXT_CALL */,
+          codegenNode: createCallExpression(context, children[0].children)
+          // createCallExpression 内部会调用 context.helper(CREATE_TEXT_VNODE)
+        };
       }
     };
   }
@@ -290,21 +298,6 @@ function transformExpression(node, context) {
   if (5 /* INTERPOLATION */ === node.type) {
     node.content.content = "_ctx." + node.content.content;
   }
-}
-function createTransformContext(root) {
-  const context = {
-    currentNode: root,
-    parent: null,
-    //createElementVnode createTextVnode createCommentVnode
-    transformNode: [transformElement, transformText, transformExpression],
-    helpers: /* @__PURE__ */ new Map(),
-    helper(name) {
-      let count = context.helpers.get(name) || 0;
-      context.helpers.set(name, count + 1);
-      return name;
-    }
-  };
-  return context;
 }
 function traverseNode(node, context) {
   context.currentNode = node;
@@ -335,18 +328,47 @@ function traverseNode(node, context) {
     }
   }
 }
+function createTransformContext(root) {
+  const context = {
+    currentNode: root,
+    parent: null,
+    //createElementVnode createTextVnode createCommentVnode
+    transformNode: [transformElement, transformText, transformExpression],
+    helpers: /* @__PURE__ */ new Map(),
+    helper(name) {
+      let count = context.helpers.get(name) || 0;
+      context.helpers.set(name, count + 1);
+      return name;
+    }
+  };
+  return context;
+}
 function transform(ast) {
   const context = createTransformContext(ast);
   traverseNode(ast, context);
   ast.helpers = [...context.helpers.keys()];
 }
+
+// packages/compiler-core/src/index.ts
 function compile(template) {
   const ast = parse(template);
   transform(ast);
-  return ast;
+  return generate(ast);
+}
+function generate(ast) {
+  const context = createCodegenContext();
+  const { push, newline } = context;
+  const { children } = ast;
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i];
+    genNode(child, context);
+  }
+  return {
+    code: context.code
+  };
 }
 export {
   compile,
-  parse
+  generate
 };
 //# sourceMappingURL=compiler-core.js.map

@@ -13,12 +13,11 @@
 			// } from '/node_modules/@vue/compiler-dom/dist/compiler-dom.esm-browser.js'
 
 			import {
-				parse,
-				compile
+				generate,
 			} from './compiler-core.js'
 
 
-			console.log(compile('<div>{{999}} a a{{ a}} a {{a}} a a   d</div>'))
+			console.log(generate('<div>{{999}} a a{{ a}} a {{a}} a a   d</div>'))
 		</script>
 	</body>
 </html>

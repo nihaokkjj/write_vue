@@ -245,8 +245,14 @@ function transformElement(node, context) {
       const tag = JSON.stringify(node.tag);
       let props = null;
       let children = node.children;
+      if (children.length === 1) {
+        children = children[0];
+      } else if (children.length === 0) {
+        children = null;
+      }
       const vnodeCall = createVnodeCall(context, tag, props, children);
-      context.currentNode = vnodeCall;
+      Object.assign(node, vnodeCall);
+      node.type = 13 /* VNODE_CALL */;
       if (context.parent.type === 0 /* ROOT */) {
         context.parent.codegenNode = vnodeCall;
       }
@@ -355,17 +361,72 @@ function compile(template) {
   transform(ast);
   return generate(ast);
 }
+function createCodegenContext() {
+  const context = {
+    code: ``,
+    level: 0,
+    helper(name) {
+      return "_" + helperMap[name];
+    },
+    push(code) {
+      context.code += code;
+    },
+    indent() {
+      newLine(++context.level);
+    },
+    deindent(noNewLine = false) {
+      newLine(--context.level);
+    }
+  };
+  function newLine(n) {
+    context.push("\n" + `  `.repeat(n));
+  }
+  return context;
+}
+function genNode(node, context) {
+  const { push } = context;
+  switch (node.type) {
+    case 13 /* VNODE_CALL */:
+      genVNodeCall(node, context);
+      break;
+    case 2 /* TEXT */:
+      push(JSON.stringify(node.content));
+      break;
+    case 5 /* INTERPOLATION */:
+    case 4 /* SIMPLE_EXPRESSION */:
+      genCallExpression(node.content, context);
+      break;
+    case 14 /* JS_CALL_EXPRESSION */:
+      genCallExpression(node, context);
+      break;
+  }
+}
+function genVNodeCall(node, context) {
+  const { push, helper } = context;
+  push(
+    `${helper(CREATE_ELEMENT_VNODE)}(${node.tag}, ${node.props}, ${node.children})`
+  );
+}
+function genCallExpression(node, context) {
+  const { push, helper } = context;
+  push(`${helper[node.callee]}(`);
+  genNode(node.arguments[0], context);
+  push(`)`);
+}
 function generate(ast) {
   const context = createCodegenContext();
-  const { push, newline } = context;
-  const { children } = ast;
-  for (let i = 0; i < children.length; i++) {
-    const child = children[i];
-    genNode(child, context);
-  }
-  return {
-    code: context.code
-  };
+  const { push, indent, deindent } = context;
+  const helpers = [...ast.helpers.keys()];
+  push(`const { ${helpers.map((s) => helperMap[s]).map((n) => `_${n}: ${n}`).join(", ")} } = Vue`);
+  push(`
+return function render(_ctx, _cache) {`);
+  indent();
+  push(`return `);
+  genNode(ast.codegenNode, context);
+  deindent();
+  push(`
+}`);
+  return context.code;
 }
 export {
   compile,

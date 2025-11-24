@@ -21,15 +21,22 @@ function transformElement(node, context) {
             let props = null 
             let children = node.children
 
-            // 2. 创建 VNODE_CALL (Code Generation Node)
+            // 2. 检查子节点数量，如果只有一个，直接取第一个
+            if (children.length === 1) {
+                children = children[0]
+            } else if (children.length === 0) {
+                children = null
+            } 
+            // 如果多于一个，children 保持为数组 [child1, child2, ...]
+
+            // 3. 创建 VNODE_CALL (Code Generation Node)
             const vnodeCall = createVnodeCall(context, tag, props, children)
             
-            // 3. 注入 AST 优化信息 (PatchFlags - 待实现)
-            // vnodeCall.patchFlag = PatchFlags.TEXT // 示例：如果节点只包含文本，注入 TEXT 标记
+            // 4. 将 ELEMENT 节点替换为 VNODE_CALL (通过 Object.assign 替换属性)
+            // 这样做可以让父节点 children 数组中的引用指向新的 VNODE_CALL
+            Object.assign(node, vnodeCall)
+            node.type = NodeTypes.VNODE_CALL
             
-            // 4. 替换当前 AST 节点：将 ELEMENT 节点替换为 VNODE_CALL
-            context.currentNode = vnodeCall
-
             // 5. 将 VNODE_CALL 挂载到根节点的 codegenNode 上 (如果是根节点)
             if (context.parent.type === NodeTypes.ROOT) {
                 context.parent.codegenNode = vnodeCall

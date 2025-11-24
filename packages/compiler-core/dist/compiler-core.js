@@ -1,3 +1,21 @@
+// packages/compiler-core/src/runtimeHelper.ts
+var TO_DISPLAY_STRING = Symbol("TO_DISPLAY_STRING");
+var CREATE_TEXT_VNODE = Symbol("CREATE_TEXT_VNODE");
+var helperMap = {
+  [TO_DISPLAY_STRING]: "toDisplayString",
+  [CREATE_TEXT_VNODE]: "createTextVNode"
+};
+
+// packages/compiler-core/src/ast.ts
+function createCallExpression(context, args) {
+  let name = context.helper(CREATE_TEXT_VNODE);
+  return {
+    type: 14 /* JS_CALL_EXPRESSION */,
+    arguments: args,
+    callee: name
+  };
+}
+
 // packages/compiler-core/src/parser.ts
 function createParserContext(content) {
   return {
@@ -209,22 +227,64 @@ function parse(template) {
   return createRoot(parseChildren(context));
 }
 
-// packages/compiler-core/src/runtimeHelper.ts
-var T0_DISPLAY_STRING = Symbol("T0_DISPLAY_STRING");
-var helperMap = {
-  [T0_DISPLAY_STRING]: "toDisplayString"
-};
-
 // packages/compiler-core/src/index.ts
 function transformElement(node, context) {
   if (1 /* ELEMENT */ === node.type) console.log("\u5904\u7406\u5143\u7D20");
 }
+function isText(node) {
+  return 2 /* TEXT */ === node.type || 5 /* INTERPOLATION */ === node.type;
+}
 function transformText(node, context) {
-  if (1 /* ELEMENT */ === node.type || 0 /* ROOT */ === node.type)
-    console.log("\u5143\u7D20\u4E2D\u542B\u6709\u6587\u672C");
-  return function() {
-    console.log("\u6587\u672C\u5904\u7406\u540E\u89E6\u53D1");
-  };
+  if (1 /* ELEMENT */ === node.type || 0 /* ROOT */ === node.type) {
+    return function() {
+      console.log("\u6587\u672C\u5904\u7406\u540E\u89E6\u53D1");
+      const children = node.children;
+      let container = null;
+      let hasText = false;
+      for (let i = 0; i < children.length; i++) {
+        let child = children[i];
+        if (isText(child)) {
+          hasText = true;
+          for (let j = i + 1; j < children.length; j++) {
+            const next = children[j];
+            if (isText(next)) {
+              if (!container) {
+                container = children[i] = {
+                  type: 8 /* COMPOUND_EXPRESSION */,
+                  children: [child]
+                };
+              }
+              container.children.push(`+`, next);
+              children.splice(j, 1);
+              j--;
+            } else {
+              container = null;
+              break;
+            }
+          }
+        }
+      }
+      if (!hasText && children.length === 1) {
+        return;
+      }
+      for (let i = 0; i < children.length; i++) {
+        const child = children[i];
+        if (isText(child) || child.type === 8 /* COMPOUND_EXPRESSION */) {
+          const args = [];
+          args.push(child);
+          if (child.type === 2 /* TEXT */) {
+            args.push(1 /* TEXT */);
+          }
+          children[i] = {
+            type: 12 /* TEXT_CALL */,
+            //vreateTextVnode
+            content: child,
+            codegenNode: createCallExpression(context, args)
+          };
+        }
+      }
+    };
+  }
 }
 function transformExpression(node, context) {
   if (5 /* INTERPOLATION */ === node.type) {
@@ -265,10 +325,10 @@ function traverseNode(node, context) {
       break;
     //对表达式的处理
     case 5 /* INTERPOLATION */:
-      context.helper(T0_DISPLAY_STRING);
+      context.helper(TO_DISPLAY_STRING);
       break;
   }
-  let i = exits.length - 1;
+  let i = exits.length;
   if (exits.length) {
     while (i--) {
       exits[i]();
@@ -283,6 +343,7 @@ function transform(ast) {
 function compile(template) {
   const ast = parse(template);
   transform(ast);
+  return ast;
 }
 export {
   compile,

@@ -1,3 +1,5 @@
+import { CREATE_TEXT_VNODE } from "./runtimeHelper"
+
 export enum NodeTypes {
   ROOT,
   ELEMENT,
@@ -29,4 +31,15 @@ export enum NodeTypes {
   JS_ASSIGNMENT_EXPRESSION,
   JS_SEQUENCE_EXPRESSION,
   JS_RETURN_STATEMENT,
+}
+
+
+export function createCallExpression(context, args) {
+
+  let name = context.helper(CREATE_TEXT_VNODE)
+  return  {
+    type: NodeTypes.JS_CALL_EXPRESSION,
+    arguments: args,
+    callee:name
+  }
 }

@@ -12,10 +12,10 @@
 			// 	parse,
 			// } from '/node_modules/@vue/compiler-dom/dist/compiler-dom.esm-browser.js'
 
-			import {
-				generate,
-			} from './compiler-core.js'
+			import { compile, generate } from './compiler-core.js'
 
+			const render = compile('<div>{{ msg }} hello</div>')
+			console.log(render.toString())
 
 			console.log(generate('<div>{{999}} a a{{ a}} a {{a}} a a   d</div>'))
 		</script>

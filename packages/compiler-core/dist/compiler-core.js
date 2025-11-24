@@ -209,20 +209,27 @@ function parse(template) {
   return createRoot(parseChildren(context));
 }
 
+// packages/compiler-core/src/runtimeHelper.ts
+var T0_DISPLAY_STRING = Symbol("T0_DISPLAY_STRING");
+var helperMap = {
+  [T0_DISPLAY_STRING]: "toDisplayString"
+};
+
 // packages/compiler-core/src/index.ts
 function transformElement(node, context) {
-  if (1 /* ELEMENT */ === node.type)
-    console.log("\u5904\u7406\u5143\u7D20");
+  if (1 /* ELEMENT */ === node.type) console.log("\u5904\u7406\u5143\u7D20");
 }
 function transformText(node, context) {
   if (1 /* ELEMENT */ === node.type || 0 /* ROOT */ === node.type)
     console.log("\u5143\u7D20\u4E2D\u542B\u6709\u6587\u672C");
-  console.log("\u5904\u7406\u6587\u672C");
+  return function() {
+    console.log("\u6587\u672C\u5904\u7406\u540E\u89E6\u53D1");
+  };
 }
 function transformExpression(node, context) {
-  if (5 /* INTERPOLATION */ === node.type)
-    console.log("\u5904\u7406\u63D2\u503C");
-  console.log("\u5904\u7406\u8868\u8FBE\u5F0F");
+  if (5 /* INTERPOLATION */ === node.type) {
+    node.content.content = "_ctx." + node.content.content;
+  }
 }
 function createTransformContext(root) {
   const context = {
@@ -242,21 +249,36 @@ function createTransformContext(root) {
 function traverseNode(node, context) {
   context.currentNode = node;
   const transforms = context.transformNode;
-  for (let i = 0; i < transforms.length; i++) {
-    transforms[i](node, context);
+  const exits = [];
+  for (let i2 = 0; i2 < transforms.length; i2++) {
+    let exit = transforms[i2](node, context);
+    exit && exits.push(exit);
   }
   switch (node.type) {
     case 0 /* ROOT */:
+      break;
     case 1 /* ELEMENT */:
-      for (let i = 0; i < node.children.length; i++) {
+      for (let i2 = 0; i2 < node.children.length; i2++) {
         context.parent = node;
-        traverseNode(node.children[i], context);
+        traverseNode(node.children[i2], context);
       }
+      break;
+    //对表达式的处理
+    case 5 /* INTERPOLATION */:
+      context.helper(T0_DISPLAY_STRING);
+      break;
+  }
+  let i = exits.length - 1;
+  if (exits.length) {
+    while (i--) {
+      exits[i]();
+    }
   }
 }
 function transform(ast) {
   const context = createTransformContext(ast);
   traverseNode(ast, context);
+  ast.helpers = [...context.helpers.keys()];
 }
 function compile(template) {
   const ast = parse(template);

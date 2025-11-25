@@ -6,6 +6,8 @@
   "type": "module",
   "scripts": {
     "dev": "node script/dev.js compiler-core -f esm",
+    "build:pkg": "node script/build.js",
+    "build:site": "node script/build-site.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

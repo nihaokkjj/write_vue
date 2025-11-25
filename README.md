@@ -11,7 +11,7 @@
   - 虚拟节点与 `h`、`createVnode`、`Fragment`/`Text`、`ShapeFlags`
   - 组件实例/`setup`/`props`/`attrs`/`slots`/`emit`/`expose`
   - 生命周期：`onBeforeMount`/`onMounted`/`onBeforeUpdate`/`onUpdated`
-  - `provide`/`inject`
+  - `provide`/`inject` 
   - 异步组件：`defineAsyncComponent`（支持 `loader`+`delay`+`timeout`+`error/loading` 组件与 `onError(retry/fail)`）
   - 内置组件：`Teleport`、`Transition`
   - 渲染与 Diff：带 `key` 的子节点比较 + 最长递增子序列（LIS）移动优化
